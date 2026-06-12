@@ -845,5 +845,16 @@ else:
 
 # ─── ТОЧКА ВХОДА ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    import socket
+    
+    # Проверить доступность порта
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    result = sock.connect_ex(('0.0.0.0', PORT))
+    sock.close()
+    
+    if result == 0:
+        logger.error(f"❌ Порт {PORT} уже занят!")
+        import sys; sys.exit(1)
+    
     logger.info(f"🌌 Запуск Cosmic Tapper на порту {PORT}...")
     uvicorn.run(app, host="0.0.0.0", port=PORT)
