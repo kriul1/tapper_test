@@ -444,10 +444,10 @@ def validate_init_data(init_data_str: str) -> dict|None:
         return None
 
 # ─── FASTAPI APP ─────────────────────────────────────────────────────────────
-api = FastAPI(title="Cosmic Tapper API")
-api.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app = FastAPI(title="Cosmic Tapper API")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 from fastapi.staticfiles import StaticFiles
-api.mount("/", StaticFiles(directory=_BASE_DIR, html=True), name="static")
+app.mount("/", StaticFiles(directory=_BASE_DIR, html=True), name="static")
 
 async def _get_uid(request: Request) -> tuple[int, str]:
     """Извлекает uid из initData или тестового заголовка."""
@@ -463,7 +463,7 @@ async def _get_uid(request: Request) -> tuple[int, str]:
         raise HTTPException(403, "Invalid initData")
     return user["id"], user.get("username") or user.get("first_name","")
 
-@api.post("/api/profile")
+@app.post("/api/profile")
 async def api_profile(request: Request):
     uid, uname = await _get_uid(request)
     async with get_lock(uid):
@@ -734,7 +734,7 @@ async def api_clan_create(request: Request):
         except Exception: return {"ok":False,"msg":"Имя занято"}
     return {"ok":True,"clan_id":new_id}
 
-@api.get("/api/bosses_list")
+@app.get("/api/bosses_list")
 async def api_bosses_list():
     return [{"key":k,"name":v["name"],"hp":v["hp"],"reward":v["reward"],
              "emoji":v["emoji"],"prestige_req":v["prestige_req"]} for k,v in BOSSES.items()]
