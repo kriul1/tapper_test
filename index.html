@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Cosmic Tapper v4</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --tg-bg: var(--tg-theme-bg-color, #0d0d1a);
+    --tg-text: var(--tg-theme-text-color, #e8e8ff);
+    --tg-hint: var(--tg-theme-hint-color, #8888aa);
+    --tg-link: var(--tg-theme-link-color, #7c8de8);
+    --tg-btn: var(--tg-theme-button-color, #5b6cf0);
+    --tg-btn-text: var(--tg-theme-button-text-color, #ffffff);
+    --accent: #a78bfa;
+    --gold: #fbbf24;
+    --crit: #f87171;
+    --combo: #34d399;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { background: var(--tg-bg); color: var(--tg-text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow-x: hidden; }
+  body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom, 20px); }
+
+  /* TAP BUTTON */
+  #tapBtn {
+    width: 180px; height: 180px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #7c3aed, #4c1d95, #1e1b4b);
+    border: 3px solid var(--accent);
+    box-shadow: 0 0 30px #7c3aed88, 0 0 60px #4c1d9544, inset 0 0 20px #00000044;
+    cursor: pointer; user-select: none; transition: transform .08s, box-shadow .08s;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    position: relative; overflow: hidden;
+  }
+  #tapBtn:active { transform: scale(0.93); box-shadow: 0 0 15px #7c3aed66; }
+  #tapBtn .planet { font-size: 64px; line-height: 1; }
+  #tapBtn .tap-hint { font-size: 11px; color: #c4b5fd; letter-spacing: 2px; margin-top: 4px; }
+
+  /* RIPPLE */
+  .ripple { position: absolute; border-radius: 50%; background: rgba(167,139,250,.25);
+    animation: ripple .5s ease-out forwards; pointer-events: none; }
+  @keyframes ripple { 0%{width:0;height:0;opacity:1;transform:translate(-50%,-50%)} 100%{width:200px;height:200px;opacity:0;transform:translate(-50%,-50%)} }
+
+  /* FLOAT NUMBERS */
+  .float-num { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px;
+    animation: floatUp .9s ease-out forwards; z-index: 9999; }
+  .float-num.crit { color: var(--crit); font-size: 24px; text-shadow: 0 0 10px #f87171; }
+  .float-num.combo { color: var(--combo); }
+  @keyframes floatUp { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-80px) scale(0.8)} }
+
+  /* TABS */
+  .tab { flex: 1; padding: 8px 0; text-align: center; font-size: 10px; color: var(--tg-hint);
+    cursor: pointer; transition: color .2s; border-top: 2px solid transparent; user-select: none; }
+  .tab.active { color: var(--accent); border-top-color: var(--accent); }
+  .tab-icon { font-size: 20px; display: block; }
+
+  /* CARDS */
+  .card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 16px; padding: 12px 14px; }
+  .card-sm { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; padding: 10px 12px; }
+
+  /* UPGRADE CARD */
+  .upg-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px; cursor: pointer; transition: background .15s, border-color .15s; }
+  .upg-card.can { border-color: rgba(167,139,250,.4); background: rgba(124,58,237,.1); }
+  .upg-card.can:active { background: rgba(124,58,237,.2); }
+  .upg-card.locked { opacity: .4; cursor: not-allowed; }
+
+  /* BOSS HP BAR */
+  .hp-bar { height: 10px; border-radius: 5px; background: rgba(255,255,255,.1); overflow: hidden; }
+  .hp-fill { height: 100%; background: linear-gradient(90deg, #ef4444, #f87171);
+    transition: width .3s ease; border-radius: 5px; }
+
+  /* PROGRESS BAR */
+  .prog-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
+  .prog-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #7c3aed); transition: width .3s; border-radius: 3px; }
+
+  /* BTN */
+  .btn { padding: 10px 20px; border-radius: 12px; font-weight: 600; font-size: 14px;
+    cursor: pointer; transition: opacity .15s, transform .1s; user-select: none; }
+  .btn:active { transform: scale(.97); opacity: .9; }
+  .btn-primary { background: var(--tg-btn); color: var(--tg-btn-text); }
+  .btn-danger { background: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; }
+  .btn-ghost { background: rgba(255,255,255,.06); color: var(--tg-text); border: 1px solid rgba(255,255,255,.12); }
+  .btn-disabled { background: rgba(255,255,255,.06); color: var(--tg-hint); cursor: not-allowed; }
+
+  /* EVENT BADGE */
+  .event-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+    background: rgba(251,191,36,.15); border: 1px solid rgba(251,191,36,.3);
+    border-radius: 20px; font-size: 12px; color: var(--gold); }
+
+  /* COMBO RING */
+  #comboRing { position: absolute; inset: -8px; border-radius: 50%; border: 3px solid transparent;
+    transition: border-color .3s, box-shadow .3s; pointer-events: none; }
+  #comboRing.active { border-color: var(--combo); box-shadow: 0 0 20px var(--combo)44; }
+
+  /* SCROLL */
+  .scroll-y { overflow-y: auto; }
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 3px; }
+
+  /* LOADER */
+  .spinner { width: 32px; height: 32px; border: 3px solid rgba(167,139,250,.2);
+    border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* TOAST */
+  #toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%) translateY(-80px);
+    padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600;
+    transition: transform .3s ease; z-index: 99999; pointer-events: none;
+    background: rgba(30,27,75,.95); border: 1px solid var(--accent); color: var(--tg-text);
+    white-space: nowrap; }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  .stars-bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .star { position: absolute; background: #fff; border-radius: 50%; opacity: 0;
+    animation: twinkle var(--d, 3s) var(--delay, 0s) infinite; }
+  @keyframes twinkle { 0%,100%{opacity:0} 50%{opacity:var(--op,.6)} }
+</style>
+</head>
+<body>
+
+<!-- STARS BACKGROUND -->
+<div class="stars-bg" id="starsBg"></div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- LOADING -->
+<div id="loading" class="fixed inset-0 flex flex-col items-center justify-center z-50" style="background:var(--tg-bg)">
+  <div class="text-5xl mb-4">🌌</div>
+  <div class="spinner mb-4"></div>
+  <div class="text-sm" style="color:var(--tg-hint)">Загрузка Cosmic Tapper...</div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="hidden flex flex-col" style="height:100vh; position:relative; z-index:1">
+
+  <!-- HEADER -->
+  <div class="px-4 pt-3 pb-2 flex items-center justify-between" style="background:rgba(13,13,26,.8);backdrop-filter:blur(10px);">
+    <div>
+      <div class="text-xs" style="color:var(--tg-hint)">МОНЕТЫ</div>
+      <div class="font-bold text-lg" id="hCoins" style="color:var(--gold)">0</div>
+    </div>
+    <div class="text-center">
+      <div class="text-xs font-bold" style="color:var(--accent)">COSMIC TAPPER</div>
+      <div class="text-xs" style="color:var(--tg-hint)" id="hIncome">💰 0/сек</div>
+    </div>
+    <div class="text-right">
+      <div class="text-xs" style="color:var(--tg-hint)">МОЩЬ ТАП.</div>
+      <div class="font-bold" id="hTapPower" style="color:var(--accent)">1</div>
+    </div>
+  </div>
+
+  <!-- TAB CONTENT -->
+  <div class="flex-1 scroll-y px-4 py-3 overflow-y-auto" id="tabContent"></div>
+
+  <!-- BOTTOM TABS -->
+  <div class="flex border-t" style="border-color:rgba(255,255,255,.08);background:rgba(13,13,26,.95);backdrop-filter:blur(10px);">
+    <div class="tab active" data-tab="home" onclick="switchTab('home')"><span class="tab-icon">🌌</span>Главная</div>
+    <div class="tab" data-tab="upgrades" onclick="switchTab('upgrades')"><span class="tab-icon">🛠</span>Апгрейды</div>
+    <div class="tab" data-tab="quests" onclick="switchTab('quests')"><span class="tab-icon">📋</span>Квесты</div>
+    <div class="tab" data-tab="bosses" onclick="switchTab('bosses')"><span class="tab-icon">🐉</span>Боссы</div>
+    <div class="tab" data-tab="profile" onclick="switchTab('profile')"><span class="tab-icon">👤</span>Профиль</div>
+    <div class="tab" data-tab="leaders" onclick="switchTab('leaders')"><span class="tab-icon">🏅</span>Топ</div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════
+const API_BASE = ""; // Пустая строка = тот же origin, где лежит index.html
+// Для разработки без ngrok можно поставить: const API_BASE = "http://localhost:8000";
+
+// ═══════════════════════════════════════════════════
+//  TELEGRAM INIT
+// ═══════════════════════════════════════════════════
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+const initData = tg?.initData || "";
+const isDev = !initData; // fallback для теста в браузере
+
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
+let state = {
+  coins: 0, earned: 0, tap_power: 1, income_per_sec: 0,
+  rebirth: 0, prestige: 0, ascension: 0,
+  taps: 0, combo: 0, total_crits: 0, bosses_killed: 0,
+  crit_chance: 0, crit_mult: 2,
+  achievements: [], achievements_total: 0,
+  event_active: false, event_end: 0, event_tap_mult: 1,
+  boss_key: null, boss_hp: 0,
+  rebirth_cost: 10000, prestige_cost: 5, ascension_cost: 20,
+  max_rebirth: 150, max_prestige: 70, max_ascension: 35,
+};
+let currentTab = "home";
+let upgrades = [];
+let quests = { daily: null, hourly: null, monthly: null, monthly_locked: true };
+let bossesList = [];
+let leaderboard = [];
+let clanData = { my_clan_id: null, clans: [] };
+let tapPending = false;
+let lastTapTime = 0;
+
+// ═══════════════════════════════════════════════════
+//  API CALLS
+// ═══════════════════════════════════════════════════
+async function apiPost(endpoint, extra = {}) {
+  const body = {
+    initData,
+    ...(isDev ? { _test_uid: 12345, _test_name: "DevPlayer" } : {}),
+    ...extra,
+  };
+  const res = await fetch(API_BASE + endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function apiGet(endpoint) {
+  const res = await fetch(API_BASE + endpoint);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════════
+//  NUMBER FORMAT
+// ═══════════════════════════════════════════════════
+function fmt(n) {
+  n = Number(n);
+  if (isNaN(n)) return "0";
+  const tiers = [[1e18,"Qi"],[1e15,"Q"],[1e12,"T"],[1e9,"B"],[1e6,"M"],[1e3,"K"]];
+  for (const [t,s] of tiers) if (n >= t) return (n/t).toFixed(2)+s;
+  return Math.floor(n).toString();
+}
+
+function fmtTime(sec) {
+  sec = Math.floor(sec);
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+  if (h) return `${h}ч ${m}м ${s}с`;
+  if (m) return `${m}м ${s}с`;
+  return `${s}с`;
+}
+
+// ═══════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg, duration = 2000) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), duration);
+}
+
+// ═══════════════════════════════════════════════════
+//  STARS
+// ═══════════════════════════════════════════════════
+function buildStars() {
+  const bg = document.getElementById("starsBg");
+  for (let i = 0; i < 80; i++) {
+    const s = document.createElement("div"); s.className = "star";
+    const size = Math.random()*2+1;
+    s.style.cssText = `width:${size}px;height:${size}px;top:${Math.random()*100}%;left:${Math.random()*100}%;
+      --d:${2+Math.random()*4}s;--delay:${Math.random()*5}s;--op:${0.3+Math.random()*0.7}`;
+    bg.appendChild(s);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  HEADER UPDATE
+// ═══════════════════════════════════════════════════
+function updateHeader() {
+  document.getElementById("hCoins").textContent = fmt(state.coins);
+  document.getElementById("hIncome").textContent = `💰 ${fmt(state.income_per_sec)}/сек`;
+  document.getElementById("hTapPower").textContent = fmt(state.tap_power);
+}
+
+// ═══════════════════════════════════════════════════
+//  TAP
+// ═══════════════════════════════════════════════════
+function createRipple(btn, e) {
+  const rect = btn.getBoundingClientRect();
+  const r = document.createElement("div"); r.className = "ripple";
+  r.style.left = ((e.clientX || rect.left+90) - rect.left) + "px";
+  r.style.top  = ((e.clientY || rect.top+90)  - rect.top)  + "px";
+  btn.appendChild(r);
+  setTimeout(() => r.remove(), 500);
+}
+
+function spawnFloat(text, x, y, isCrit, isCombo) {
+  const el = document.createElement("div");
+  el.className = "float-num" + (isCrit?" crit":"") + (isCombo?" combo":"");
+  el.textContent = text;
+  el.style.left = (x - 20) + "px";
+  el.style.top  = (y - 20) + "px";
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+
+async function doTap(e) {
+  const now = Date.now();
+  if (tapPending || now - lastTapTime < 60) return;
+  lastTapTime = now;
+
+  // Оптимистичное обновление UI
+  const btn = document.getElementById("tapBtn");
+  if (btn) createRipple(btn, e);
+  tapPending = true;
+
+  try {
+    const data = await apiPost("/api/tap");
+    if (data.ok) {
+      state.coins = data.coins;
+      state.tap_power = data.tap_power;
+      state.combo = data.combo;
+      updateHeader();
+
+      const rect = btn?.getBoundingClientRect();
+      const cx = rect ? rect.left + rect.width/2 : window.innerWidth/2;
+      const cy = rect ? rect.top + rect.height/2 : window.innerHeight/2;
+      spawnFloat("+" + fmt(data.gain), cx, cy - 30, data.is_crit, data.combo > 5);
+
+      if (data.is_crit) spawnFloat("💥 КРИТ!", cx + 30, cy - 60, true, false);
+      if (data.combo > 5) {
+        const ring = document.getElementById("comboRing");
+        if (ring) { ring.classList.add("active"); setTimeout(()=>ring.classList.remove("active"), 500); }
+      }
+
+      // Обновить комбо-индикатор
+      const comboEl = document.getElementById("comboCount");
+      if (comboEl) comboEl.textContent = data.combo > 1 ? `🔥 ×${data.combo}` : "";
+    }
+  } catch (err) {
+    console.error("Tap error:", err);
+  }
+  tapPending = false;
+}
+
+// ═══════════════════════════════════════════════════
+//  TAB RENDERING
+// ═══════════════════════════════════════════════════
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab===tab));
+  renderTab();
+}
+
+function renderTab() {
+  const el = document.getElementById("tabContent");
+  switch (currentTab) {
+    case "home":     renderHome(el); break;
+    case "upgrades": renderUpgrades(el); break;
+    case "quests":   renderQuests(el); break;
+    case "bosses":   renderBosses(el); break;
+    case "profile":  renderProfile(el); break;
+    case "leaders":  renderLeaders(el); break;
+  }
+}
+
+// ─── HOME TAB ───────────────────────────────────────
+function renderHome(el) {
+  const now = Date.now()/1000;
+  const eventLeft = Math.max(0, state.event_end - now);
+
+  el.innerHTML = `
+    <div class="flex flex-col items-center gap-4">
+
+      ${state.event_active ? `<div class="event-badge">⚡ Событие активно — ${fmtTime(eventLeft)}</div>` : ""}
+
+      <!-- STATS ROW -->
+      <div class="grid grid-cols-3 gap-2 w-full">
+        <div class="card-sm text-center">
+          <div class="text-xs" style="color:var(--tg-hint)">Ребирт</div>
+          <div class="font-bold text-sm" style="color:var(--accent)">🔄 ${state.rebirth}</div>
+        </div>
+        <div class="card-sm text-center">
+          <div class="text-xs" style="color:var(--tg-hint)">Престиж</div>
+          <div class="font-bold text-sm" style="color:#f59e0b">⭐ ${state.prestige}</div>
+        </div>
+        <div class="card-sm text-center">
+          <div class="text-xs" style="color:var(--tg-hint)">Вознесение</div>
+          <div class="font-bold text-sm" style="color:#818cf8">🌌 ${state.ascension}</div>
+        </div>
+      </div>
+
+      <!-- TAP BUTTON -->
+      <div style="position:relative; margin: 8px 0">
+        <div id="comboRing"></div>
+        <button id="tapBtn" onclick="doTap(event)">
+          <span class="planet">🪐</span>
+          <span class="tap-hint">ТАПАТЬ</span>
+        </button>
+      </div>
+
+      <!-- COMBO -->
+      <div id="comboCount" class="font-bold text-lg" style="min-height:28px;color:var(--combo)">
+        ${state.combo > 1 ? `🔥 ×${state.combo}` : ""}
+      </div>
+
+      <!-- STATS -->
+      <div class="card w-full">
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div><span style="color:var(--tg-hint)">Монет всего: </span><span class="font-semibold">${fmt(state.earned)}</span></div>
+          <div><span style="color:var(--tg-hint)">Тапов: </span><span class="font-semibold">${fmt(state.taps)}</span></div>
+          <div><span style="color:var(--tg-hint)">Крит шанс: </span><span class="font-semibold" style="color:var(--crit)">${(state.crit_chance*100).toFixed(1)}%</span></div>
+          <div><span style="color:var(--tg-hint)">Крит ×: </span><span class="font-semibold" style="color:var(--crit)">${fmt(state.crit_mult)}</span></div>
+        </div>
+      </div>
+
+      <!-- PRESTIGE ACTIONS -->
+      <div class="w-full grid grid-cols-1 gap-2">
+        <div class="card">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-semibold">🔄 Ребирт #${state.rebirth+1}</span>
+            <span class="text-xs" style="color:var(--tg-hint)">Нужно: ${fmt(state.rebirth_cost)} монет</span>
+          </div>
+          <div class="prog-bar mb-2"><div class="prog-fill" style="width:${Math.min(100,state.coins/state.rebirth_cost*100)}%"></div></div>
+          <button class="${state.coins >= state.rebirth_cost ? 'btn btn-primary' : 'btn btn-disabled'} w-full text-sm"
+            onclick="doRebirth()">
+            ${state.coins >= state.rebirth_cost ? '✅ Выполнить ребирт' : `❌ Ещё ${fmt(state.rebirth_cost - state.coins)}`}
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-semibold">⭐ Престиж #${state.prestige+1}</span>
+            <span class="text-xs" style="color:var(--tg-hint)">Нужно: ${state.prestige_cost} ребиртов</span>
+          </div>
+          <div class="prog-bar mb-2"><div class="prog-fill" style="width:${Math.min(100,state.rebirth/state.prestige_cost*100)}%"></div></div>
+          <button class="${state.rebirth >= state.prestige_cost ? 'btn btn-primary' : 'btn btn-disabled'} w-full text-sm"
+            onclick="doPrestige()">
+            ${state.rebirth >= state.prestige_cost ? '✅ Выполнить престиж' : `❌ Нужно ${state.prestige_cost} ребиртов`}
+          </button>
+        </div>
+
+        ${state.prestige >= 20 ? `
+        <div class="card">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-semibold">🌌 Вознесение #${state.ascension+1}</span>
+            <span class="text-xs" style="color:var(--tg-hint)">Нужно: ${state.ascension_cost} престижей</span>
+          </div>
+          <div class="prog-bar mb-2"><div class="prog-fill" style="width:${Math.min(100,state.prestige/state.ascension_cost*100)}%"></div></div>
+          <button class="${state.prestige >= state.ascension_cost ? 'btn btn-primary' : 'btn btn-disabled'} w-full text-sm"
+            onclick="doAscension()">
+            ${state.prestige >= state.ascension_cost ? '✅ Вознестись!' : `❌ Нужно ${state.ascension_cost} престижей`}
+          </button>
+        </div>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+// ─── UPGRADES TAB ───────────────────────────────────
+let currentBranch = null;
+
+function renderUpgrades(el) {
+  if (!upgrades.length) {
+    el.innerHTML = `<div class="flex justify-center items-center h-32"><div class="spinner"></div></div>`;
+    loadUpgrades();
+    return;
+  }
+  if (currentBranch) {
+    renderBranchDetail(el, currentBranch);
+    return;
+  }
+  el.innerHTML = `
+    <div class="mb-3 font-bold text-base" style="color:var(--accent)">🛠 Улучшения — 14 веток</div>
+    <div class="grid grid-cols-2 gap-2">
+    ${upgrades.map(b => `
+      <div class="card-sm cursor-pointer flex items-center gap-2 ${b.unlocked?'':'opacity-40'}"
+        onclick="${b.unlocked ? `openBranch('${b.branch}')` : ''}">
+        <span class="text-2xl">${b.emoji}</span>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs font-semibold truncate">${b.name}</div>
+          ${!b.unlocked ? `<div class="text-xs" style="color:var(--crit)">🔒 Престиж ${b.prestige_req}</div>` :
+            `<div class="text-xs" style="color:var(--tg-hint)">${b.items.filter(i=>i.level>0).length} куплено</div>`}
+        </div>
+      </div>
+    `).join("")}
+    </div>
+  `;
+}
+
+function openBranch(branch) {
+  currentBranch = branch;
+  renderTab();
+}
+
+function renderBranchDetail(el, branch) {
+  const b = upgrades.find(x => x.branch === branch);
+  if (!b) return;
+  el.innerHTML = `
+    <div class="flex items-center gap-2 mb-3">
+      <button class="btn btn-ghost text-sm px-3 py-2" onclick="currentBranch=null;renderTab()">← Назад</button>
+      <span class="text-lg font-bold">${b.emoji} ${b.name}</span>
+    </div>
+    <div class="flex flex-col gap-2">
+    ${b.items.map(item => `
+      <div class="upg-card ${item.can_buy?'can':''} ${!b.unlocked?'locked':''}"
+        onclick="${item.can_buy ? `buyUpgrade('${item.key}')` : ''}">
+        <span class="text-2xl">${item.emoji}</span>
+        <div class="flex-1">
+          <div class="text-sm font-semibold">${item.name}</div>
+          <div class="text-xs" style="color:var(--tg-hint)">Уровень: ${item.level} | Цена: ${fmt(item.cost)}</div>
+        </div>
+        <div class="text-lg">${item.can_buy ? '✅' : '❌'}</div>
+      </div>
+    `).join("")}
+    </div>
+  `;
+}
+
+async function loadUpgrades() {
+  try {
+    upgrades = await apiPost("/api/upgrades");
+    renderTab();
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+async function buyUpgrade(key) {
+  try {
+    const data = await apiPost("/api/buy_upgrade", { key });
+    if (data.ok) {
+      state.coins = data.coins;
+      showToast(`✅ Куплено! Lv.${data.level}`);
+      updateHeader();
+      upgrades = []; // сброс кэша
+      loadUpgrades();
+    } else { showToast("❌ " + data.msg); }
+  } catch(e) { showToast("❌ Ошибка покупки"); }
+}
+
+// ─── QUESTS TAB ─────────────────────────────────────
+function renderQuests(el) {
+  const q = quests;
+  function questCard(label, data) {
+    if (!data) return `<div class="card-sm mb-2" style="color:var(--tg-hint)">${label}: нет активного квеста</div>`;
+    const pct = Math.min(100, (data.progress/data.target)*100);
+    return `
+      <div class="card mb-2">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-xl">${data.emoji}</span>
+          <div class="flex-1">
+            <div class="font-semibold text-sm">${label} ${data.name}</div>
+            <div class="text-xs" style="color:var(--tg-hint)">${data.progress}/${data.target} | 💰 ${fmt(data.reward)} | ⏱ ${fmtTime(data.reset_in)}</div>
+          </div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+      </div>`;
+  }
+  el.innerHTML = `
+    <div class="font-bold text-base mb-3" style="color:var(--accent)">📋 Квесты</div>
+    ${questCard("🌅 Дневной", q.daily)}
+    ${questCard("⏰ Часовой", q.hourly)}
+    ${q.monthly_locked
+      ? `<div class="card-sm" style="color:var(--tg-hint)">📅 Месячный: 🔒 Откроется при Престиже 30</div>`
+      : questCard("📅 Месячный", q.monthly)}
+  `;
+}
+
+async function loadQuests() {
+  try {
+    quests = await apiPost("/api/quests");
+    if (currentTab === "quests") renderTab();
+  } catch(e) { console.error(e); }
+}
+
+// ─── BOSSES TAB ─────────────────────────────────────
+function renderBosses(el) {
+  if (!bossesList.length) {
+    el.innerHTML = `<div class="flex justify-center h-32 items-center"><div class="spinner"></div></div>`;
+    loadBosses();
+    return;
+  }
+  el.innerHTML = `
+    <div class="font-bold text-base mb-3" style="color:var(--accent)">🐉 Боссы</div>
+    ${state.boss_key ? (() => {
+      const b = bossesList.find(x=>x.key===state.boss_key);
+      if (!b) return "";
+      const pct = Math.max(0, (state.boss_hp/b.hp)*100);
+      return `<div class="card mb-3">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-3xl">${b.emoji}</span>
+          <div class="flex-1">
+            <div class="font-bold">${b.name}</div>
+            <div class="text-xs" style="color:var(--tg-hint)">${fmt(state.boss_hp)} / ${fmt(b.hp)} HP</div>
+          </div>
+        </div>
+        <div class="hp-bar"><div class="hp-fill" id="bossHpFill" style="width:${pct}%"></div></div>
+      </div>`;
+    })() : ""}
+    <div class="flex flex-col gap-2">
+    ${bossesList.map(b => {
+      const locked = state.prestige < b.prestige_req;
+      const active = state.boss_key === b.key;
+      return `
+        <div class="card-sm ${locked?'opacity-40':''}">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">${b.emoji}</span>
+            <div class="flex-1">
+              <div class="font-semibold text-sm">${active?'⚔️ ':''} ${b.name}</div>
+              <div class="text-xs" style="color:var(--tg-hint)">HP: ${fmt(b.hp)} | 💰 ${fmt(b.reward)}</div>
+              ${locked ? `<div class="text-xs" style="color:var(--crit)">🔒 Престиж ${b.prestige_req}</div>` : ""}
+            </div>
+            ${!locked ? `<button class="btn btn-primary text-sm px-4 py-2" onclick="attackBoss('${b.key}')">Атака</button>` : ""}
+          </div>
+        </div>`;
+    }).join("")}
+    </div>
+  `;
+}
+
+async function loadBosses() {
+  try {
+    bossesList = await apiGet("/api/bosses_list");
+    if (currentTab === "bosses") renderTab();
+  } catch(e) { console.error(e); }
+}
+
+async function attackBoss(key) {
+  try {
+    const data = await apiPost("/api/boss_attack", { boss_key: key });
+    if (data.ok) {
+      state.boss_key = data.killed ? null : key;
+      state.boss_hp  = data.boss_hp;
+      state.coins    = data.coins;
+      updateHeader();
+      if (data.killed) {
+        showToast(`🎉 Босс повержен! +${fmt(data.reward)} монет!`, 3000);
+        state.boss_key = null;
+      } else {
+        showToast(`💥 Урон: ${fmt(data.damage)}`);
+      }
+      renderTab();
+    }
+  } catch(e) { showToast("❌ Ошибка"); }
+}
+
+// ─── PROFILE TAB ────────────────────────────────────
+function renderProfile(el) {
+  el.innerHTML = `
+    <div class="font-bold text-base mb-3" style="color:var(--accent)">👤 Профиль & Кланы</div>
+    <div class="card mb-3">
+      <div class="grid grid-cols-2 gap-2 text-sm">
+        <div><span style="color:var(--tg-hint)">Монет: </span><span class="font-semibold" style="color:var(--gold)">${fmt(state.coins)}</span></div>
+        <div><span style="color:var(--tg-hint)">Заработано: </span><span class="font-semibold">${fmt(state.earned)}</span></div>
+        <div><span style="color:var(--tg-hint)">Тапов: </span><span class="font-semibold">${fmt(state.taps)}</span></div>
+        <div><span style="color:var(--tg-hint)">Критов: </span><span class="font-semibold">${fmt(state.total_crits)}</span></div>
+        <div><span style="color:var(--tg-hint)">Боссов убито: </span><span class="font-semibold">${state.bosses_killed}</span></div>
+        <div><span style="color:var(--tg-hint)">Достижения: </span><span class="font-semibold">${state.achievements.length}/${state.achievements_total}</span></div>
+        <div><span style="color:var(--tg-hint)">Мощь тапа: </span><span class="font-semibold" style="color:var(--accent)">${fmt(state.tap_power)}</span></div>
+        <div><span style="color:var(--tg-hint)">Доход/сек: </span><span class="font-semibold">${fmt(state.income_per_sec)}</span></div>
+      </div>
+    </div>
+
+    <!-- CLAN SECTION -->
+    <div class="font-semibold mb-2">⚔️ Кланы</div>
+    ${renderClanSection()}
+  `;
+}
+
+function renderClanSection() {
+  if (clanData.my_clan_id) {
+    const myClan = clanData.clans.find(c=>c.id===clanData.my_clan_id);
+    return `
+      <div class="card mb-2">
+        <div class="text-sm mb-2">Вы в клане: <span class="font-bold">${myClan?.name || "#"+clanData.my_clan_id}</span> (${myClan?.members||"?"} чел.)</div>
+        <button class="btn btn-danger text-sm w-full" onclick="leaveClan()">🚪 Покинуть клан</button>
+      </div>`;
+  }
+  return `
+    <div class="flex flex-col gap-2">
+      ${clanData.clans.slice(0,6).map(c=>`
+        <div class="card-sm flex items-center justify-between">
+          <div>
+            <div class="font-semibold text-sm">⚔️ ${c.name}</div>
+            <div class="text-xs" style="color:var(--tg-hint)">${c.members} участников</div>
+          </div>
+          <button class="btn btn-primary text-xs px-3 py-2" onclick="joinClan(${c.id})">Вступить</button>
+        </div>`).join("")}
+      <div class="flex gap-2">
+        <input id="clanNameInput" class="flex-1 rounded-xl px-3 py-2 text-sm"
+          style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);color:var(--tg-text)"
+          placeholder="Название нового клана">
+        <button class="btn btn-primary text-sm px-4" onclick="createClan()">Создать</button>
+      </div>
+    </div>`;
+}
+
+async function joinClan(id) {
+  try {
+    const data = await apiPost("/api/clan_join", { clan_id: id });
+    if (data.ok) { showToast("✅ Вступили в клан!"); loadClans(); }
+    else showToast("❌ " + data.msg);
+  } catch(e) { showToast("❌ Ошибка"); }
+}
+
+async function leaveClan() {
+  try {
+    await apiPost("/api/clan_leave");
+    showToast("✅ Вы покинули клан"); loadClans();
+  } catch(e) { showToast("❌ Ошибка"); }
+}
+
+async function createClan() {
+  const name = document.getElementById("clanNameInput")?.value?.trim();
+  if (!name) { showToast("❌ Введите название"); return; }
+  try {
+    const data = await apiPost("/api/clan_create", { name });
+    if (data.ok) { showToast("✅ Клан создан!"); loadClans(); }
+    else showToast("❌ " + data.msg);
+  } catch(e) { showToast("❌ Ошибка"); }
+}
+
+async function loadClans() {
+  try {
+    clanData = await apiPost("/api/clans");
+    if (currentTab === "profile") renderTab();
+  } catch(e) { console.error(e); }
+}
+
+// ─── LEADERBOARD TAB ────────────────────────────────
+function renderLeaders(el) {
+  if (!leaderboard.length) {
+    el.innerHTML = `<div class="flex justify-center h-32 items-center"><div class="spinner"></div></div>`;
+    loadLeaderboard();
+    return;
+  }
+  const medals = ["🥇","🥈","🥉"];
+  el.innerHTML = `
+    <div class="font-bold text-base mb-3" style="color:var(--accent)">🏅 Топ-20 игроков</div>
+    <div class="flex flex-col gap-2">
+    ${leaderboard.map(p=>`
+      <div class="card-sm flex items-center gap-3">
+        <span class="text-xl w-8 text-center">${medals[p.rank-1]||p.rank}</span>
+        <div class="flex-1">
+          <div class="font-semibold text-sm">${p.name}</div>
+          <div class="text-xs" style="color:var(--tg-hint)">🌌${p.ascension} ⭐${p.prestige} 🔄${p.rebirth}</div>
+        </div>
+        <div class="text-xs font-semibold" style="color:var(--gold)">${fmt(p.earned)}</div>
+      </div>`).join("")}
+    </div>
+    <button class="btn btn-ghost w-full mt-3 text-sm" onclick="loadLeaderboard()">🔄 Обновить</button>
+  `;
+}
+
+async function loadLeaderboard() {
+  try {
+    leaderboard = await apiPost("/api/leaderboard");
+    if (currentTab === "leaders") renderTab();
+  } catch(e) { console.error(e); }
+}
+
+// ─── PRESTIGE ACTIONS ───────────────────────────────
+async function doRebirth() {
+  if (state.coins < state.rebirth_cost) return;
+  try {
+    const data = await apiPost("/api/rebirth");
+    if (data.ok) {
+      showToast(`✅ Ребирт #${data.rebirth}! Бонус ×${data.bonus.toFixed(2)}`, 3000);
+      await loadProfile();
+      renderTab();
+    } else showToast("❌ " + data.msg);
+  } catch(e) { showToast("❌ Ошибка"); }
+}
+
+async function doPrestige() {
+  if (state.rebirth < state.prestige_cost) return;
+  try {
+    const data = await apiPost("/api/prestige");
+    if (data.ok) {
+      showToast(`⭐ Престиж #${data.prestige}! ${data.unlock || ""}`, 3000);
+      upgrades = []; await loadProfile();
+      renderTab();
+    } else showToast("❌ " + data.msg);
+  } catch(e) { showToast("❌ Ошибка"); }
+}
+
+async function doAscension() {
+  try {
+    const data = await apiPost("/api/ascension");
+    if (data.ok) {
+      showToast(`🌌 Вознесение #${data.ascension}! ${data.bonus}`, 4000);
+      upgrades = []; await loadProfile();
+      renderTab();
+    } else showToast("❌ " + data.msg);
+  } catch(e) { showToast("❌ Ошибка"); }
+}
+
+// ═══════════════════════════════════════════════════
+//  LOAD PROFILE
+// ═══════════════════════════════════════════════════
+async function loadProfile() {
+  const data = await apiPost("/api/profile");
+  Object.assign(state, data);
+  updateHeader();
+  if (data.offline_earned > 0) {
+    showToast(`⏰ Офлайн доход: +${fmt(data.offline_earned)} монет!`, 4000);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  AUTO-REFRESH (доход в реальном времени)
+// ═══════════════════════════════════════════════════
+let incomeInterval;
+
+function startIncomeTimer() {
+  incomeInterval = setInterval(() => {
+    if (state.income_per_sec > 0) {
+      // Оптимистичное приращение, реальные данные придут при следующем tap/profile
+      state.coins += state.income_per_sec / 5;
+      updateHeader();
+    }
+  }, 200);
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+async function init() {
+  buildStars();
+  try {
+    await loadProfile();
+    // Параллельная загрузка данных
+    loadUpgrades();
+    loadBosses();
+    loadQuests();
+    loadClans();
+
+    document.getElementById("loading").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+
+    renderTab();
+    startIncomeTimer();
+
+    // Периодическое обновление профиля
+    setInterval(async () => {
+      try { await loadProfile(); } catch(e) {}
+    }, 15000);
+
+    // Обновление квестов каждые 30с
+    setInterval(() => { loadQuests(); }, 30000);
+
+  } catch(err) {
+    console.error("Init error:", err);
+    document.getElementById("loading").innerHTML = `
+      <div class="text-center px-8">
+        <div class="text-4xl mb-3">❌</div>
+        <div class="font-bold mb-2">Ошибка подключения</div>
+        <div class="text-sm mb-4" style="color:var(--tg-hint)">${err.message}</div>
+        <button class="btn btn-primary" onclick="init()">🔄 Повторить</button>
+      </div>`;
+  }
+}
+
+window.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
