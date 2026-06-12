@@ -30,8 +30,8 @@ from telegram.request import HTTPXRequest
 logging.basicConfig(format="%(asctime)s %(levelname)s %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN  = os.getenv("BOT_TOKEN",  "8925431626:AAF_MIKtKgQWNP8ygxTo-ON59rNF7yTr2Jg")
-WEBAPP_URL = os.getenv("WEBAPP_URL", "https://unwrapped-succulent-envy.ngrok-free.dev")  # URL фронтенда
+BOT_TOKEN  = os.getenv("BOT_TOKEN",  "BOT_TOKEN")
+WEBAPP_URL = os.getenv("WEBAPP_URL", "WEBAPP_URL")  # URL фронтенда
 
 _BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
 DB_PATH    = os.path.join(_BASE_DIR, "cosmic_tapper_v4.db")
