@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 BOT_TOKEN  = os.getenv("BOT_TOKEN", "")
 PORT       = int(os.getenv("PORT", os.getenv("API_PORT", "8000")))
-DEV_MODE   = os.getenv("DEV_MODE", "0") == "1"
+DEV_MODE   = os.getenv("DEV_MODE", "0") == "0"
 BASE_DIR   = Path(__file__).parent
 DB_PATH    = BASE_DIR / "cosmic_tapper.db"
 TAP_COOLDOWN = 0.05
