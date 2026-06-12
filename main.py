@@ -493,7 +493,7 @@ async def api_profile(request: Request):
         "max_rebirth": MAX_REBIRTH, "max_prestige": MAX_PRESTIGE, "max_ascension": MAX_ASCENSION,
     }
 
-@api.post("/api/tap")
+@app.post("/api/tap")
 async def api_tap(request: Request):
     uid, uname = await _get_uid(request)
     async with get_lock(uid):
@@ -527,7 +527,7 @@ async def api_tap(request: Request):
         "tap_power":calc_tap_power(p)
     }
 
-@api.post("/api/upgrades")
+@app.post("/api/upgrades")
 async def api_upgrades(request: Request):
     uid, _ = await _get_uid(request)
     async with get_lock(uid):
@@ -546,7 +546,7 @@ async def api_upgrades(request: Request):
                        "unlocked":unlocked,"prestige_req":req,"items":items})
     return result
 
-@api.post("/api/buy_upgrade")
+@app.post("/api/buy_upgrade")
 async def api_buy_upgrade(request: Request):
     uid, uname = await _get_uid(request)
     body = await request.json()
@@ -564,7 +564,7 @@ async def api_buy_upgrade(request: Request):
         await save_player(uid,p,uname)
     return {"ok":True,"key":key,"level":p["upgrades"][key],"coins":p["coins"]}
 
-@api.post("/api/boss_attack")
+@app.post("/api/boss_attack")
 async def api_boss_attack(request: Request):
     uid, uname = await _get_uid(request)
     body = await request.json()
@@ -588,7 +588,7 @@ async def api_boss_attack(request: Request):
             "boss_hp":max(0,p["boss_hp"]),"boss_max_hp":boss["hp"],
             "reward":boss["reward"] if killed else 0,"coins":p["coins"]}
 
-@api.post("/api/rebirth")
+@app.post("/api/rebirth")
 async def api_rebirth(request: Request):
     uid, uname = await _get_uid(request)
     async with get_lock(uid):
@@ -602,7 +602,7 @@ async def api_rebirth(request: Request):
         await save_player(uid,p,uname)
     return {"ok":True,"rebirth":p["rebirth"],"bonus":REBIRTH_BONUS_TABLE.get(p["rebirth"],1.0)}
 
-@api.post("/api/prestige")
+@app.post("/api/prestige")
 async def api_prestige(request: Request):
     uid, uname = await _get_uid(request)
     async with get_lock(uid):
@@ -616,7 +616,7 @@ async def api_prestige(request: Request):
         await check_achievements(uid,p); await save_player(uid,p,uname)
     return {"ok":True,"prestige":p["prestige"],"unlock":unlock}
 
-@api.post("/api/ascension")
+@app.post("/api/ascension")
 async def api_ascension(request: Request):
     uid, uname = await _get_uid(request)
     async with get_lock(uid):
@@ -631,7 +631,7 @@ async def api_ascension(request: Request):
         await check_achievements(uid,p); await save_player(uid,p,uname)
     return {"ok":True,"ascension":p["ascension"],"bonus":bonus}
 
-@api.post("/api/quests")
+@app.post("/api/quests")
 async def api_quests(request: Request):
     uid, _ = await _get_uid(request)
     async with get_lock(uid):
@@ -652,7 +652,7 @@ async def api_quests(request: Request):
         "monthly_locked": p.get("prestige",0)<30,
     }
 
-@api.post("/api/leaderboard")
+@app.post("/api/leaderboard")
 async def api_leaderboard(request: Request):
     async with DB.execute("SELECT username,data FROM players") as cur:
         rows=await cur.fetchall()
@@ -668,7 +668,7 @@ async def api_leaderboard(request: Request):
                        "rebirth":d.get("rebirth",0),"earned":d.get("earned",0)})
     return result
 
-@api.post("/api/clans")
+@app.post("/api/clans")
 async def api_clans(request: Request):
     uid, _ = await _get_uid(request)
     async with get_lock(uid):
@@ -680,7 +680,7 @@ async def api_clans(request: Request):
         "clans":[{"id":r[0],"name":r[1],"members":len(json.loads(r[2]))} for r in rows]
     }
 
-@api.post("/api/clan_join")
+@app.post("/api/clan_join")
 async def api_clan_join(request: Request):
     uid, uname = await _get_uid(request)
     body = await request.json()
@@ -698,7 +698,7 @@ async def api_clan_join(request: Request):
         await check_achievements(uid,p); await save_player(uid,p,uname)
     return {"ok":True}
 
-@api.post("/api/clan_leave")
+@app.post("/api/clan_leave")
 async def api_clan_leave(request: Request):
     uid, uname = await _get_uid(request)
     async with get_lock(uid):
@@ -714,7 +714,7 @@ async def api_clan_leave(request: Request):
         p["clan_id"]=None; await save_player(uid,p,uname)
     return {"ok":True}
 
-@api.post("/api/clan_create")
+@app.post("/api/clan_create")
 async def api_clan_create(request: Request):
     uid, uname = await _get_uid(request)
     body = await request.json()
