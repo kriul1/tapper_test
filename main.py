@@ -14,7 +14,7 @@
 ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ:
   BOT_TOKEN  — токен бота (нужен для проверки initData от Telegram)
   PORT       — порт сервера (Railway задаёт автоматически)
-  DEV_MODE   — 1 для локального теста без Telegram (принимает _test_uid)
+  DEV_MODE   — 0 для локального теста без Telegram (принимает _test_uid)
 """
 
 import os, json, time, asyncio, logging, aiosqlite, random, hashlib, hmac
