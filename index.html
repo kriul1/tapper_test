@@ -227,7 +227,7 @@ async function apiPost(endpoint, extra = {}) {
   return res.json();
 }
 
-async function apiGet(endpoint) {
+async function apiPost(endpoint) {
   const res = await fetch(API_BASE + endpoint);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
@@ -626,7 +626,7 @@ function renderBosses(el) {
 
 async function loadBosses() {
   try {
-    bossesList = await apiGet("/api/bosses_list");
+    bossesList = await apiPost("/api/bosses_list");
     if (currentTab === "bosses") renderTab();
   } catch(e) { console.error(e); }
 }
