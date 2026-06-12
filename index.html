@@ -626,7 +626,7 @@ function renderBosses(el) {
 
 async function loadBosses() {
   try {
-    bossesList = await apiPost("/api/bosses_list");
+    bossesList = await apiGet("/api/bosses_list");
     if (currentTab === "bosses") renderTab();
   } catch(e) { console.error(e); }
 }
