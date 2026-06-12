@@ -848,6 +848,7 @@ if __name__ == "__main__":
     import socket
     
     # Проверить доступность порта
-    if __name__ == "__main__":
+
+if __name__ == "__main__":
     logger.info(f"🌌 Запуск Cosmic Tapper на порту {PORT}...")
     uvicorn.run(app, host="0.0.0.0", port=PORT)
